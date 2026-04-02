@@ -1,0 +1,24 @@
+# --- Cache and build artifacts (generated files) ---
+.gradle/
+/build
+
+# --- Local environment configuration (SDK path) ---
+local.properties
+
+# --- IDE specific files (Android Studio / IntelliJ) ---
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+*.iml
+
+# --- System files (macOS / Windows) ---
+.DS_Store
+Thumbs.db
+
+# --- Diagnostics, backups and temporary build files ---
+captures/
+.externalNativeBuild
+.cxx
