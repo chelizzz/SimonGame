@@ -64,7 +64,13 @@ fun StartScreen(onEndGameClicked: () -> Unit) {
                     .padding(20.dp),
 
                 onColorClicked = { clickedColor ->
-                    inputSeq += clickedColor
+                    // If it's the first button to be pressed, the sequence is empty
+                    if(inputSeq.isEmpty()) {
+                        inputSeq += clickedColor
+                    } else {
+                        // Template Expressions: pieces of code that are evaluated and whose results are concatenated into a string
+                        inputSeq = "$inputSeq, $clickedColor"
+                    }
                 }
             )
 
@@ -124,7 +130,11 @@ fun StartScreen(onEndGameClicked: () -> Unit) {
                         .weight(7f),
 
                     onColorClicked = { clickedColor ->
-                        inputSeq += clickedColor
+                        if(inputSeq.isEmpty())
+                            inputSeq += clickedColor
+                        else
+                            inputSeq = "$inputSeq, $clickedColor"
+
                     }
                 )
 
@@ -140,7 +150,7 @@ fun StartScreen(onEndGameClicked: () -> Unit) {
 
             Spacer(modifier = Modifier.weight(0.025f)) // occupies 2.5% of the screen height
 
-            // Row of two action buttons: Delete and End game
+            // Row of two action buttons: Clear and End game
             Row(
                 modifier = Modifier
                     .weight(0.05f) // occupies 5% of the screen height
@@ -189,6 +199,9 @@ fun ButtonGrid(colMod: Modifier, onColorClicked: (String) -> Unit) {
                         modifier = Modifier
                             .weight(1f) // each button occupies 1/2 of the row
                             .fillMaxSize(),
+                        // Reference: https://kotlinlang.org/docs/lambdas.html#function-types
+                        // ButtonGrid calls the function passed as parameter to be executed after click event
+                        // When invoked in StartScreen the function is then defined
                         onClick = { onColorClicked(color.key) },
                         shape = RoundedCornerShape(25),
                         colors = ButtonDefaults.buttonColors(containerColor = color.value)
@@ -227,7 +240,7 @@ fun ActionButtons(onClearClicked: () -> Unit, onEndGameClicked: () -> Unit, buMo
         onClick = onClearClicked,
         modifier = buMod
     ) {
-        Text(text = stringResource(R.string.delete))
+        Text(text = stringResource(R.string.clear))
     }
     Button(
         onClick = onEndGameClicked,
