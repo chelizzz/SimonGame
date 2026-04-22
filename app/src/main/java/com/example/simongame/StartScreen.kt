@@ -30,8 +30,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+
 @Composable
-fun StartScreen(onEndGameClicked: () -> Unit) {
+fun StartScreen(onEndGameClicked: (String) -> Unit) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -96,7 +97,7 @@ fun StartScreen(onEndGameClicked: () -> Unit) {
 
                 ActionButtons(
                     onClearClicked = { inputSeq = "" },
-                    onEndGameClicked = onEndGameClicked,
+                    onEndGameClicked = { onEndGameClicked(inputSeq) },
                     buMod = Modifier.fillMaxWidth()
                 )
             }
@@ -159,7 +160,7 @@ fun StartScreen(onEndGameClicked: () -> Unit) {
             ) {
                 ActionButtons(
                     onClearClicked = { inputSeq = "" },
-                    onEndGameClicked = onEndGameClicked,
+                    onEndGameClicked = { onEndGameClicked(inputSeq) },
                     buMod = Modifier.weight(1f)
                 )
             }

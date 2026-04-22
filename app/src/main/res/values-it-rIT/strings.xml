@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SimonGame</string>
+    <string name="clear">Cancella</string>
+    <string name="end_game">Fine partita</string>
+    <string name="history">Cronologia Partite</string>
+    <string name="games">Partite giocate:</string>
+    <string name="back">Indietro</string>
+</resources>
