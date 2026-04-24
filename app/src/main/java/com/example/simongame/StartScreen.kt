@@ -34,14 +34,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun StartScreen(onEndGameClicked: (String) -> Unit) {
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
 
     // The State variable inputSeq triggers a Recomposition whenever the value changes
     // It represents the sequence of buttons pressed until a specific moment in time
     var inputSeq by rememberSaveable { mutableStateOf("") }
-
-    val backgroundColor = Color(0xFF541D8B) // background color of the screen
-    val panelColor = Color(0xFF18275A) // background color of the panel containing UI elements
 
     // --- LANDSCAPE LAYOUT ---
     if (isLandscape) {
@@ -50,16 +47,16 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
             // Reference: https://developer.android.com/reference/kotlin/androidx/compose/ui/Modifier
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
+                .background(GameConst.backgroundColorOne)
                 .padding(32.dp), // inner padding, inside background, around elements
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             ButtonGrid(
-                colMod = Modifier
+                colModifier = Modifier
                     .weight(1f) // the button grid occupies 1/2 of the screen
                     .background(
-                        color = panelColor,
+                        color = GameConst.panelColor,
                         shape = RoundedCornerShape(25.dp)
                     )
                     .padding(20.dp),
@@ -84,12 +81,12 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 SequenceDisplay(
                     inputSeq,
 
-                    textMod = Modifier
+                    textModifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .background(
-                            color = panelColor,
+                            color = GameConst.panelColor,
                             shape = RoundedCornerShape(25.dp)
                         )
                         .padding(20.dp) // inner padding separating the text from the border
@@ -97,8 +94,11 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
 
                 ActionButtons(
                     onClearClicked = { inputSeq = "" },
-                    onEndGameClicked = { onEndGameClicked(inputSeq) },
-                    buMod = Modifier.fillMaxWidth()
+                    onEndGameClicked = {
+                        onEndGameClicked(inputSeq)
+                        inputSeq = ""
+                    },
+                    buModifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -109,7 +109,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
+                .background(GameConst.backgroundColorOne)
                 .padding(16.dp), // inner padding, inside background, around elements
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -120,14 +120,14 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 modifier = Modifier
                     .weight(0.6f) // occupies 60% of the screen height
                     .background(
-                        color = panelColor,
+                        color = GameConst.panelColor,
                         shape = RoundedCornerShape(25.dp)
                     )
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 ButtonGrid(
-                    colMod = Modifier
+                    colModifier = Modifier
                         .weight(7f),
 
                     onColorClicked = { clickedColor ->
@@ -142,7 +142,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 SequenceDisplay(
                     inputSeq,
 
-                    textMod = Modifier
+                    textModifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
@@ -160,8 +160,11 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
             ) {
                 ActionButtons(
                     onClearClicked = { inputSeq = "" },
-                    onEndGameClicked = { onEndGameClicked(inputSeq) },
-                    buMod = Modifier.weight(1f)
+                    onEndGameClicked = {
+                        onEndGameClicked(inputSeq)
+                        inputSeq = ""
+                    },
+                    buModifier = Modifier.weight(1f)
                 )
             }
 
@@ -173,22 +176,15 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
 
 // Grid 3x2: a column of 3 rows, each containing 2 buttons
 @Composable
-fun ButtonGrid(colMod: Modifier, onColorClicked: (String) -> Unit) {
+fun ButtonGrid(colModifier: Modifier, onColorClicked: (String) -> Unit) {
     Column(
-        modifier = colMod,
+        modifier = colModifier,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Map of buttons colors in Compose format (with alpha channel set to 100% opacity-0xFF)
-        val buColors = mapOf(
-            "R" to Color(0xffdc2626), "G" to Color(0xFF00A63E), // red, green
-            "B" to Color(0xFF155DFC), "M" to Color(0xFFC800DE), // blue, magenta
-            "Y" to Color(0xFFF0B100), "C" to Color(0xFF05A9E8) // yellow, cyan
-        )
-
         // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/chunked.html
         // For each couple of colors, create a row of 2 buttons
         // The iterator rowPair selects a chunk of two colors from the map
-        buColors.chunked(2).forEach { rowPair ->
+        GameConst.buColors.chunked(2).forEach { rowPair ->
             Row(
                 modifier = Modifier
                     .weight(1f), // each row occupies 1/3 of the column
@@ -223,11 +219,11 @@ fun <K, V> Map<K, V>.chunked(size: Int): List<List<Map.Entry<K, V>>> {
 
 
 @Composable
-fun SequenceDisplay(inputSeq: String, textMod: Modifier) {
+fun SequenceDisplay(inputSeq: String, textModifier: Modifier) {
     Text(
         // Text component observes the State inputSeq and updates automatically
         text = inputSeq,
-        modifier = textMod,
+        modifier = textModifier,
         textAlign = TextAlign.Center,
         color = Color.White,
         fontSize = 20.sp
@@ -236,18 +232,35 @@ fun SequenceDisplay(inputSeq: String, textMod: Modifier) {
 
 
 @Composable
-fun ActionButtons(onClearClicked: () -> Unit, onEndGameClicked: () -> Unit, buMod: Modifier) {
+fun ActionButtons(onClearClicked: () -> Unit, onEndGameClicked: () -> Unit, buModifier: Modifier) {
     Button(
         onClick = onClearClicked,
-        modifier = buMod
+        modifier = buModifier
     ) {
         Text(text = stringResource(R.string.clear))
     }
     Button(
         onClick = onEndGameClicked,
-        modifier = buMod
+        modifier = buModifier
     ) {
         Text(text = stringResource(R.string.end_game))
+    }
+}
+
+
+class GameConst {
+    companion object {
+        val backgroundColorOne = Color(0xFF541D8B) // background color of StartScreen
+        val backgroundColorTwo = Color(0xFF26368E) // background color of HistoryScreen
+
+        val panelColor = Color(0xFF18275A) // background color of the panel containing UI elements
+
+        // Map of buttons colors in Compose format (with alpha channel set to 100% opacity-0xFF)
+        val buColors = mapOf(
+            "R" to Color(0xffdc2626), "G" to Color(0xFF00A63E), // red, green
+            "B" to Color(0xFF155DFC), "M" to Color(0xFFC800DE), // blue, magenta
+            "Y" to Color(0xFFF0B100), "C" to Color(0xFF05A9E8) // yellow, cyan
+        )
     }
 }
 

@@ -52,7 +52,14 @@ class MainActivity : ComponentActivity() {
                             // orEmpty(): Kotlin helper function for Strings, if getString returns null, it returns an empty string
                             HistoryScreen(
                                 sequence = backStackEntry.arguments?.getString("sequence").orEmpty(),
-                                onBackClicked = { navController.navigate("start") }
+                                onBackClicked = {
+                                    navController.navigate("start") {
+                                        // Reference: https://developer.android.com/guide/navigation/backstack#pop
+                                        // Tells the navigation controller to remove destinations from the back stack until it reaches the screen with the route "start"
+                                        // inclusive = true: also removes the "start" destination itself from the back stack
+                                        popUpTo("start") { inclusive = true }
+                                    }
+                                }
                             )
                         }
                     }
