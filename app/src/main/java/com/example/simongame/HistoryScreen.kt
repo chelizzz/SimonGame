@@ -33,10 +33,7 @@ import androidx.compose.ui.unit.sp
 val games: MutableList<String> = mutableListOf()
 
 @Composable
-// Receives the latest color sequence from StartScreen via MainActivity
-fun HistoryScreen(sequence: String, onBackClicked: () -> Unit) {
-    // First things first, add the latest sequence to the list
-    games.add(sequence)
+fun HistoryScreen(onBackClicked: () -> Unit) {
 
     val configuration = LocalConfiguration.current
     val isLandscape = (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
@@ -169,5 +166,5 @@ fun DrawInput(input: String) {
 @Preview(showBackground = true)
 @Composable
 fun HistoryScreenPreview() {
-    HistoryScreen(sequence = "R, G, B, M, Y, C", onBackClicked = {})
+    HistoryScreen(onBackClicked = {})
 }
