@@ -4,6 +4,8 @@ import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowColumn
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,7 +65,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
 
                 onColorClicked = { clickedColor ->
                     // If it's the first button to be pressed, the sequence is empty
-                    if(inputSeq.isEmpty()) {
+                    if (inputSeq.isEmpty()) {
                         inputSeq += clickedColor
                     } else {
                         // Template Expressions: pieces of code that are evaluated and whose results are concatenated into a string
@@ -76,13 +78,12 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
             Column(
                 modifier = Modifier
                     .weight(1f), // the column occupies the other 1/2 of the screen
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
                 SequenceDisplay(
                     inputSeq,
-
                     textModifier = Modifier
-                        .weight(1f)
+                        .weight(1f) // automatically fill the remaining space in the parent container (Column)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .background(
@@ -92,14 +93,19 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                         .padding(20.dp) // inner padding separating the text from the border
                 )
 
-                ActionButtons(
-                    onClearClicked = { inputSeq = "" },
-                    onEndGameClicked = {
-                        onEndGameClicked(inputSeq)
-                        inputSeq = ""
-                    },
-                    buModifier = Modifier.fillMaxWidth()
-                )
+                // FlowColumn automatically distributes the action buttons in different lines
+                FlowColumn(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    ActionButtons(
+                        onPauseClicked = { inputSeq = "" },
+                        onEndGameClicked = {
+                            onEndGameClicked(inputSeq)
+                            inputSeq = ""
+                        },
+                        buModifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 
@@ -113,7 +119,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 .padding(16.dp), // inner padding, inside background, around elements
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.weight(0.25f)) // occupies 25% of the screen height
+            Spacer(modifier = Modifier.weight(0.20f)) // occupies 20% of the screen height
 
             // "Panel" containing the button grid and the input sequence
             Column(
@@ -141,7 +147,6 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
 
                 SequenceDisplay(
                     inputSeq,
-
                     textModifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
@@ -151,24 +156,26 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
 
             Spacer(modifier = Modifier.weight(0.025f)) // occupies 2.5% of the screen height
 
-            // Row of two action buttons: Clear and End game
-            Row(
+            // Reference: https://developer.android.com/develop/ui/compose/layouts/flow
+            // Rows of action buttons: Start game, Pause and End game
+            FlowRow(
                 modifier = Modifier
-                    .weight(0.05f) // occupies 5% of the screen height
+                    .weight(0.15f) // occupies 15% of the screen height
                     .fillMaxWidth(0.8f), // occupies 80% of the screen width
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                maxItemsInEachRow = 2
             ) {
                 ActionButtons(
-                    onClearClicked = { inputSeq = "" },
+                    onPauseClicked = { inputSeq = "" },
                     onEndGameClicked = {
                         onEndGameClicked(inputSeq)
                         inputSeq = ""
                     },
-                    buModifier = Modifier.weight(1f)
+                    buModifier = Modifier.weight(0.5f)
                 )
             }
 
-            Spacer(modifier = Modifier.weight(0.075f)) // occupies 7.5% of the screen height
+            Spacer(modifier = Modifier.weight(0.025f)) // occupies 2.5% of the screen height
         }
     }
 }
@@ -232,13 +239,21 @@ fun SequenceDisplay(inputSeq: String, textModifier: Modifier) {
 
 
 @Composable
-fun ActionButtons(onClearClicked: () -> Unit, onEndGameClicked: () -> Unit, buModifier: Modifier) {
+fun ActionButtons(onPauseClicked: () -> Unit, onEndGameClicked: () -> Unit, buModifier: Modifier) {
     Button(
-        onClick = onClearClicked,
+        onClick = {},
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(text = stringResource(R.string.start_game))
+    }
+
+    Button(
+        onClick = onPauseClicked,
         modifier = buModifier
     ) {
-        Text(text = stringResource(R.string.clear))
+        Text(text = stringResource(R.string.pause))
     }
+
     Button(
         onClick = onEndGameClicked,
         modifier = buModifier

@@ -31,29 +31,48 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = "start",
+                        startDestination = "history",
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        // Defines the destination "start" in the navigation graph
-                        composable("start") {
-                            StartScreen(
-                                // When the button in StartScreen is clicked, onEndGameClicked is triggered and adds the latest game sequence to the history list
-                                onEndGameClicked = { sequence ->
-                                    games.add(sequence) // the call is here to avoid duplicates on recomposition
-                                    navController.navigate("history")
-                                }
-                            )
-                        }
-
                         // Defines the destination "history" in the navigation graph
                         composable("history") {
                             HistoryScreen(
-                                onBackClicked = {
+                                onNextClicked = {
                                     navController.navigate("start") {
                                         // Reference: https://developer.android.com/guide/navigation/backstack#pop
                                         // Tells the navigation controller to remove destinations from the back stack until it reaches the screen with the route "start"
                                         // inclusive = true: also removes the "start" destination itself from the back stack
                                         popUpTo("start") { inclusive = true }
+                                    }
+                                },
+                                // When a single game row in HistoryScreen is clicked, onInputClicked is triggered with a parameter s (e.g. "R, G, B, M, Y, C")
+                                onInputClicked = { s ->
+                                    // The string route "detail/${s}" indicates the app to navigate to the detail screen, appending the value of the variable s (string interpolation)
+                                    navController.navigate("detail/${s}") {
+                                        popUpTo("detail/${s}") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // Defines the destination "detail" in the navigation graph, where {sequence} acts like a variable in the URL
+                        composable("detail/{sequence}") { backStackEntry ->
+                            DetailScreen(
+                                // backStackEntry.arguments: holds information about the current destination, including the argument (s) passed through the navigation route
+                                // ?.getString("sequence"): ? (safe call operator) since arguments could be null, it ensures the app doesn't crash and the expression returns null
+                                // orEmpty(): Kotlin helper function for Strings, if getString returns null, it returns an empty string
+                                sequence = backStackEntry.arguments?.getString("sequence").orEmpty()
+                            )
+                        }
+
+                        // Defines the destination "start" in the navigation graph
+                        composable("start") {
+                            StartScreen(
+                                // When the button in StartScreen is clicked, onEndGameClicked is triggered and adds the latest game sequence to the history list
+                                onEndGameClicked = { sequence ->
+                                    games.add(sequence) // the call is here to avoid duplicates during recomposition
+                                    navController.navigate("history") {
+                                        popUpTo("history") { inclusive = true }
                                     }
                                 }
                             )

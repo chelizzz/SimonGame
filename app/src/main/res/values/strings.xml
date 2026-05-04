@@ -1,8 +1,9 @@
 <resources>
     <string name="app_name">SimonGame</string>
-    <string name="clear">Clear</string>
+    <string name="start_game">Start game</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
     <string name="end_game">End game</string>
     <string name="history">Game History</string>
     <string name="games">Games played:</string>
-    <string name="back">Back</string>
 </resources>

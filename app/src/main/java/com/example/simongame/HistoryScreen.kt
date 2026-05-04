@@ -2,6 +2,7 @@ package com.example.simongame
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -13,7 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,8 +37,7 @@ import androidx.compose.ui.unit.sp
 val games: MutableList<String> = mutableListOf()
 
 @Composable
-fun HistoryScreen(onBackClicked: () -> Unit) {
-
+fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
     val configuration = LocalConfiguration.current
     val isLandscape = (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
     val screenPadding = if (isLandscape)
@@ -51,12 +54,12 @@ fun HistoryScreen(onBackClicked: () -> Unit) {
             .padding(screenPadding)
     ) {
         item {
-            Button(onClick = onBackClicked) {
-                Text(text = stringResource(R.string.back))
+            FloatingActionButton(onClick = onNextClicked) {
+                Icon(Icons.Filled.Add, "Floating action button.")
             }
         }
 
-        // Header: title and total game count
+        // Header: title and total games count
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -70,7 +73,17 @@ fun HistoryScreen(onBackClicked: () -> Unit) {
         // Adds a list of games played to the LazyColumn, reversed so the most recent game appears first
         items(games.asReversed()) { game ->
             Spacer(modifier = Modifier.height(16.dp))
-            DrawInput(game) // iterator of games returns a String, passed as parameter to DrawInput
+
+            // iterator of games returns a String (game) and passes it as parameter to DrawInput
+            DrawInput(game, rowMod = Modifier
+                    .clickable(onClick = { onInputClicked(game) }) // Modifier.clickable: adds click behavior to any composable
+                    .background(
+                        color = GameConst.panelColor,
+                        shape = RoundedCornerShape(15.dp)
+                    )
+                    .padding(15.dp)
+                    .fillMaxWidth()
+            )
         }
     }
 }
@@ -78,62 +91,51 @@ fun HistoryScreen(onBackClicked: () -> Unit) {
 
 // Renders a single game row: if the sequence is too long to fit, only the beginning is shown followed by a "…" indicator
 @Composable
-fun DrawInput(input: String) {
+fun DrawInput(input: String, rowMod: Modifier) {
     // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/
     val items = if (input.isNotEmpty()) // without this check the app crashes with a bug
                     input.split(", ") // split the comma-separated sequence and return a list of individual color labels
                 else
                     emptyList()
 
-    val cont = items.size // total number of buttons pressed in this game
-
     // Comprehensive row of the game: count on the left, sequence on the right
     Row(
-        modifier = Modifier
-            .background(
-                color = GameConst.panelColor,
-                shape = RoundedCornerShape(15.dp)
-            )
-            .padding(15.dp)
-            .fillMaxWidth(),
+        modifier = rowMod,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(15.dp)
     ) {
-        // Count of buttons pressed
+        // Total number of buttons pressed in this game
         Text(
-            text = "$cont ",
+            text = "${items.size} ",
             color = Color.White,
             fontSize = 20.sp
         )
 
         // Reference: https://developer.android.com/develop/ui/compose/phases
         // Reference: https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/BoxWithConstraints.composable
-        // A plain Row draws all items without caring about overflow, instead BoxWithConstraints measures available width at composition time,
-        // so we can calculate how many color tags fit before drawing them
+        // A standard Row doesn't know exactly how many pixels or DPs wide the container is, until after it has already tried to draw everything.
+        // BoxWithConstraints measures the available width at composition time, then does some math (maxAllowed and maxVisible) to decide what to actually draw.
         BoxWithConstraints(
             modifier = Modifier.weight(1f) // fills all the space left after the count Text
         ) {
-            val tagPadding = 8.dp
-            val tagSpacing = 5.dp
-            val tagWidth = 9.dp + (tagPadding * 2) // single char (9.dp) + left/right padding = 25.dp
-            val tagWithGap = tagWidth + tagSpacing // tag + spacing gap = 30.dp
-            val indicatorWidth = 20.dp // space reserved for the "…" truncation indicator
-            val maxAllowed = ((maxWidth + tagSpacing) / tagWithGap).toInt() // max tags that fit without a truncation indicator
+            val tagSpacing = 5.dp // the width of the empty space between two tags
+            val tagWidth = 25.dp // the width of a single tag: char (9.dp) + left/right padding (16.dp)
 
+            // maxWidth: specific property in BoxWithConstraintsScope that describes the total horizontal space available in the Row
+            // .toInt(): rounds down the result (e.g. 4.8 becomes 4, because you cannot display 80% of a tag)
+            val maxAllowed = (maxWidth / (tagWidth + tagSpacing)).toInt() // number of color tags that fit without a truncation indicator
             val isTruncated = items.size > maxAllowed
             val maxVisible   = if (isTruncated)
-                ((maxWidth - indicatorWidth) / tagWithGap).toInt()
-            else
-                maxAllowed
-            val visibleItems = items.take(maxVisible)
-
+                                    ((maxWidth - tagWidth) / (tagWidth + tagSpacing)).toInt() // removes tagWidth from maxWidth to reserve the space for indicator
+                                else
+                                    maxAllowed
 
             // Row of color tags representing the sequence of buttons pressed
             Row(
                 horizontalArrangement = Arrangement.spacedBy(tagSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                for (item in visibleItems) {
+                items.take(maxVisible).forEach { item ->
                     Text(
                         modifier = Modifier
                             .background(
@@ -141,7 +143,7 @@ fun DrawInput(input: String) {
                                 color = GameConst.buColors[item] ?: Color.Gray,
                                 shape = RoundedCornerShape(5.dp)
                             )
-                            .padding(tagPadding),
+                            .padding(8.dp), // inner color-tag padding
                         text = item,
                         color = Color.White,
                         fontSize = 15.sp,
@@ -154,7 +156,7 @@ fun DrawInput(input: String) {
                         text = "…",
                         color = Color.White,
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -166,5 +168,5 @@ fun DrawInput(input: String) {
 @Preview(showBackground = true)
 @Composable
 fun HistoryScreenPreview() {
-    HistoryScreen(onBackClicked = {})
+    HistoryScreen(onNextClicked = {}, onInputClicked = {})
 }
