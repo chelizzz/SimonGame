@@ -42,6 +42,10 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
     // It represents the sequence of buttons pressed until a specific moment in time
     var inputSeq by rememberSaveable { mutableStateOf("") }
 
+    val game = Game
+    var attempts by rememberSaveable { mutableStateOf(game.getRound()) }
+    var text by rememberSaveable { mutableStateOf(game.playComputer()) }
+
     // --- LANDSCAPE LAYOUT ---
     if (isLandscape) {
         // Main row of the StartScreen
@@ -137,16 +141,29 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                         .weight(7f),
 
                     onColorClicked = { clickedColor ->
-                        if(inputSeq.isEmpty())
-                            inputSeq += clickedColor
-                        else
-                            inputSeq = "$inputSeq, $clickedColor"
+                        if (attempts > 0) {
+                            if (inputSeq.isEmpty())
+                                inputSeq += clickedColor
+                            else
+                                inputSeq = "$inputSeq, $clickedColor"
 
+                            // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/
+                            if (!(text.startsWith(inputSeq))) {
+                                text = "Game Over!"
+                                attempts = 0
+                            }
+
+                            attempts--
+
+                        } else {
+                            text = "Too many buttons pressed!"
+                        }
                     }
                 )
 
                 SequenceDisplay(
-                    inputSeq,
+                    // inputSeq,
+                    text,
                     textModifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
@@ -241,8 +258,9 @@ fun SequenceDisplay(inputSeq: String, textModifier: Modifier) {
 @Composable
 fun ActionButtons(onPauseClicked: () -> Unit, onEndGameClicked: () -> Unit, buModifier: Modifier) {
     Button(
-        onClick = {},
-        modifier = Modifier.fillMaxWidth()
+        onClick = {}, // TO DO: create new game every time start button is clicked
+        modifier = Modifier.fillMaxWidth(),
+        enabled = false
     ) {
         Text(text = stringResource(R.string.start_game))
     }
@@ -255,7 +273,7 @@ fun ActionButtons(onPauseClicked: () -> Unit, onEndGameClicked: () -> Unit, buMo
     }
 
     Button(
-        onClick = onEndGameClicked,
+        onClick = onEndGameClicked, // TO DO: save game in database
         modifier = buModifier
     ) {
         Text(text = stringResource(R.string.end_game))
