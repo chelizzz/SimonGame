@@ -6,4 +6,5 @@
     <string name="end_game">End game</string>
     <string name="history">Game History</string>
     <string name="games">Games played:</string>
+    <string name="logo_description">Simon Game Logo</string>
 </resources>

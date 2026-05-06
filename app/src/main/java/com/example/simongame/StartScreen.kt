@@ -1,6 +1,7 @@
 package com.example.simongame
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -123,12 +126,30 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 .padding(16.dp), // inner padding, inside background, around elements
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.weight(0.20f)) // occupies 20% of the screen height
+            // Header containing the Simon Game Logo
+            Column(
+                modifier = Modifier.weight(0.15f), // occupies 15% of the screen height
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher),
+                    contentDescription = stringResource(R.string.logo_description),
+                    modifier = Modifier.weight(0.5f)
+                )
+                Text(
+                    text = stringResource(R.string.app_name),
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
-            // "Panel" containing the button grid and the input sequence
+            Spacer(modifier = Modifier.weight(0.025f)) // occupies 2.5% of the screen height
+
+            // Panel containing the button grid and the input sequence
             Column(
                 modifier = Modifier
-                    .weight(0.6f) // occupies 60% of the screen height
+                    .weight(0.65f) // occupies 65% of the screen height
                     .background(
                         color = GameConst.panelColor,
                         shape = RoundedCornerShape(25.dp)
@@ -138,7 +159,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
             ) {
                 ButtonGrid(
                     colModifier = Modifier
-                        .weight(7f),
+                        .weight(5f),
 
                     onColorClicked = { clickedColor ->
                         if (attempts > 0) {
@@ -191,8 +212,6 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                     buModifier = Modifier.weight(0.5f)
                 )
             }
-
-            Spacer(modifier = Modifier.weight(0.025f)) // occupies 2.5% of the screen height
         }
     }
 }
@@ -245,7 +264,7 @@ fun <K, V> Map<K, V>.chunked(size: Int): List<List<Map.Entry<K, V>>> {
 @Composable
 fun SequenceDisplay(inputSeq: String, textModifier: Modifier) {
     Text(
-        // Text component observes the State inputSeq and updates automatically
+        // Text component observes the state inputSeq and updates automatically
         text = inputSeq,
         modifier = textModifier,
         textAlign = TextAlign.Center,
