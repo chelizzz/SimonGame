@@ -1,6 +1,9 @@
 package com.example.simongame
 
 import android.content.res.Configuration
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,10 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -34,6 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -225,7 +233,7 @@ fun ButtonGrid(colModifier: Modifier, onColorClicked: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/chunked.html
-        // For each couple of colors, create a row of 2 buttons
+        // For each couple of colors, create a row of 2 buttons (from 6 colors, it creates 3 rows)
         // The iterator rowPair selects a chunk of two colors from the map
         GameConst.buColors.chunked(2).forEach { rowPair ->
             Row(
@@ -235,16 +243,61 @@ fun ButtonGrid(colModifier: Modifier, onColorClicked: (String) -> Unit) {
             ) {
                 // The iterator color selects each entry-color from the pair
                 rowPair.forEach { color ->
+                    var isClicked by remember { mutableStateOf(false) }
+
+                    // Since isClicked = false needs to happen after a time delay, a Coroutine is used so it doesn't block the UI thread
+                    val coroutineScope = rememberCoroutineScope()
+
+                    // When isClicked is true, the padding increases to 10.dp making the button to move inward
+                    // animateDpAsState: instead of the value jumping instantly from 0 to 10, it calculates the intermediate values over time (1, 2, 3 ... 10)
+                    val animatedPadding by animateDpAsState(
+                        targetValue = if (isClicked) 10.dp else 0.dp,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "padding"
+                    )
+
+                    // When isClicked is true, the color changes from transparent to a specific glow color
+                    val glowColor by animateColorAsState(
+                        targetValue = if (isClicked) GameConst.glowColors[color.key]!! else Color.Transparent,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "glow_color"
+                    )
+
+                    // When isClicked is true, the elevation increases to 20.dp making the button to emit "light"
+                    val glowElevation by animateDpAsState(
+                        targetValue = if (isClicked) 20.dp else 0.dp,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "glow_elevation"
+                    )
+
                     Button(
                         modifier = Modifier
                             .weight(1f) // each button occupies 1/2 of the row
-                            .fillMaxSize(),
+                            .fillMaxSize()
+                            .shadow( // the button looks like it is emitting light onto the background
+                                elevation = glowElevation,
+                                shape = RoundedCornerShape(25),
+                                ambientColor = glowColor,
+                                spotColor = glowColor,
+                            )
+                            .padding(animatedPadding),
                         // Reference: https://kotlinlang.org/docs/lambdas.html#function-types
                         // ButtonGrid calls the function passed as parameter to be executed after click event
                         // When invoked in StartScreen the function is then defined
-                        onClick = { onColorClicked(color.key) },
+                        onClick = {
+                            // Check if the animation isn't launched already
+                            if (!isClicked) {
+                                // The button stays in the "glowing" state for 350ms and then automatically switches back to the normal state
+                                coroutineScope.launch {
+                                    isClicked = true
+                                    delay(350)
+                                    isClicked = false
+                                }
+                            }
+                            onColorClicked(color.key)
+                        },
                         shape = RoundedCornerShape(25),
-                        colors = ButtonDefaults.buttonColors(containerColor = color.value)
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isClicked) GameConst.glowColors[color.key]!! else color.value)
                     ) {}
                 }
             }
@@ -312,6 +365,12 @@ class GameConst {
             "R" to Color(0xffdc2626), "G" to Color(0xFF00A63E), // red, green
             "B" to Color(0xFF155DFC), "M" to Color(0xFFC800DE), // blue, magenta
             "Y" to Color(0xFFF0B100), "C" to Color(0xFF05A9E8) // yellow, cyan
+        )
+
+        val glowColors = mapOf(
+            "R" to Color(0xFFFF0000), "G" to Color(0xFF01DA5A), // red, green
+            "B" to Color(0xFF0000FF), "M" to Color(0xFFF700FF), // blue, magenta
+            "Y" to Color(0xFFFFD500), "C" to Color(0xFF00E1FF) // yellow, cyan
         )
     }
 }
