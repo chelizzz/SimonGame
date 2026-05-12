@@ -54,8 +54,15 @@ fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
             .padding(screenPadding)
     ) {
         item {
-            FloatingActionButton(onClick = onNextClicked) {
-                Icon(Icons.Filled.Add, "Floating action button.")
+            FloatingActionButton(
+                onClick = onNextClicked,
+                containerColor = Color.White,
+                contentColor = Color.Black
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Floating action button."
+                )
             }
         }
 
@@ -64,9 +71,11 @@ fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.history),
+                color = Color.White,
                 style = MaterialTheme.typography.headlineMedium)
             Text(
                 text = stringResource(R.string.games) + " " + games.size,
+                color = Color.White,
                 style = MaterialTheme.typography.bodyMedium)
         }
 

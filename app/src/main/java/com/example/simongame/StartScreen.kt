@@ -8,10 +8,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowColumn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,11 +36,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.simongame.ui.theme.Gameria
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -54,8 +56,9 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
     var inputSeq by rememberSaveable { mutableStateOf("") }
 
     val game = Game
-    var attempts by rememberSaveable { mutableStateOf(game.getRound()) }
+    var attempts by rememberSaveable { mutableIntStateOf(game.getRound()) }
     var text by rememberSaveable { mutableStateOf(game.playComputer()) }
+
 
     // --- LANDSCAPE LAYOUT ---
     if (isLandscape) {
@@ -89,16 +92,25 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 }
             )
 
-            // Column container for input sequence and action buttons
+            // Column container for app logo, input sequence and action buttons
             Column(
                 modifier = Modifier
                     .weight(1f), // the column occupies the other 1/2 of the screen
                 verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
+                // Row containing the Simon Game Logo
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppLogo(Modifier.fillMaxHeight(), 30.sp)
+                }
+
                 SequenceDisplay(
                     inputSeq,
                     textModifier = Modifier
-                        .weight(1f) // automatically fill the remaining space in the parent container (Column)
+                        .weight(3f)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .background(
@@ -108,9 +120,9 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                         .padding(20.dp) // inner padding separating the text from the border
                 )
 
-                // FlowColumn automatically distributes the action buttons in different lines
-                FlowColumn(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    maxItemsInEachRow = 2
                 ) {
                     ActionButtons(
                         onPauseClicked = { inputSeq = "" },
@@ -118,11 +130,12 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                             onEndGameClicked(inputSeq)
                             inputSeq = ""
                         },
-                        buModifier = Modifier.fillMaxWidth()
+                        buModifier = Modifier.weight(0.5f)
                     )
                 }
             }
         }
+
 
         // --- PORTRAIT LAYOUT ---
     } else {
@@ -134,22 +147,13 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 .padding(16.dp), // inner padding, inside background, around elements
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header containing the Simon Game Logo
+            // Column containing the Simon Game Logo
             Column(
                 modifier = Modifier.weight(0.15f), // occupies 15% of the screen height
+                verticalArrangement = Arrangement.spacedBy(5.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_launcher),
-                    contentDescription = stringResource(R.string.logo_description),
-                    modifier = Modifier.weight(0.5f)
-                )
-                Text(
-                    text = stringResource(R.string.app_name),
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                AppLogo(Modifier.weight(0.5f), 40.sp)
             }
 
             Spacer(modifier = Modifier.weight(0.025f)) // occupies 2.5% of the screen height
@@ -222,6 +226,23 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
             }
         }
     }
+}
+
+
+@Composable
+fun AppLogo(logoModifier: Modifier, logoFontSize: TextUnit) {
+    Image(
+        painter = painterResource(R.drawable.ic_launcher),
+        contentDescription = stringResource(R.string.logo_description),
+        modifier = logoModifier
+    )
+
+    Text(
+        text = stringResource(R.string.app_name),
+        color = Color.White,
+        fontSize = logoFontSize,
+        fontFamily = Gameria
+    )
 }
 
 
@@ -362,7 +383,7 @@ class GameConst {
 
         // Map of buttons colors in Compose format (with alpha channel set to 100% opacity-0xFF)
         val buColors = mapOf(
-            "R" to Color(0xffdc2626), "G" to Color(0xFF00A63E), // red, green
+            "R" to Color(0xFFDC2626), "G" to Color(0xFF00A63E), // red, green
             "B" to Color(0xFF155DFC), "M" to Color(0xFFC800DE), // blue, magenta
             "Y" to Color(0xFFF0B100), "C" to Color(0xFF05A9E8) // yellow, cyan
         )

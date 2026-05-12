@@ -7,5 +7,9 @@
     <string name="end_game">Fine partita</string>
     <string name="history">Cronologia Partite</string>
     <string name="games">Partite giocate:</string>
+    <string name="detail">Dettaglio Partita</string>
+    <string name="score">Punteggio</string>
+    <string name="input">Sequenza giocata</string>
     <string name="logo_description">Logo Simon Game</string>
+
 </resources>
