@@ -12,7 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.simongame.ui.theme.SimonGameTheme
-
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +29,10 @@ class MainActivity : ComponentActivity() {
 
                 // The scaffold fills the whole display area
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    // Initialization of the ViewModel variable which survives as long as the MainActivity is alive
+                    // (it's not destroyed when navigating between the screens)
+                    val gameViewModel: GameViewModel = viewModel()
+
                     NavHost(
                         navController = navController,
                         startDestination = "history",
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         // Defines the destination "start" in the navigation graph
                         composable("start") {
                             StartScreen(
+                                viewModel = gameViewModel,
                                 // When the button in StartScreen is clicked, onEndGameClicked is triggered and adds the latest game sequence to the history list
                                 onEndGameClicked = { sequence ->
                                     games.add(sequence) // the call is here to avoid duplicates during recomposition

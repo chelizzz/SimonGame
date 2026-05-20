@@ -23,11 +23,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,23 +39,37 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.simongame.ui.theme.Gameria
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+// Reusable Composable function that returns a Boolean
 @Composable
-fun StartScreen(onEndGameClicked: (String) -> Unit) {
+fun isScreenLandscape(): Boolean {
     val configuration = LocalConfiguration.current
-    val isLandscape = (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+    return configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+}
 
-    // The State variable inputSeq triggers a Recomposition whenever the value changes
-    // It represents the sequence of buttons pressed until a specific moment in time
-    var inputSeq by rememberSaveable { mutableStateOf("") }
 
-    val game = Game
-    var attempts by rememberSaveable { mutableIntStateOf(game.getRound()) }
-    var text by rememberSaveable { mutableStateOf(game.playComputer()) }
+@Composable
+fun StartScreen(
+    viewModel: GameViewModel,
+    onEndGameClicked: (String) -> Unit
+) {
+    val isLandscape = isScreenLandscape()
+
+    // Reference: https://developer.android.com/topic/architecture/ui-layer/stateholders
+    // No more variables managed by "rememberSaveable", the screen UI simply reads the "uiState"
+    // and delegates actions on button clicks to the "viewModel"
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // The evaluated text is displayed inside the SequenceDisplay next to the ButtonGrid
+    // If messageRes is NOT null, ?.let resolves the string resource
+    // If it is null, the ?: safe call operator displays the input sequence
+    val displayText = uiState.messageRes?.let { stringResource(it) } ?: uiState.sequence
 
 
     // --- LANDSCAPE LAYOUT ---
@@ -80,16 +92,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                         shape = RoundedCornerShape(25.dp)
                     )
                     .padding(20.dp),
-
-                onColorClicked = { clickedColor ->
-                    // If it's the first button to be pressed, the sequence is empty
-                    if (inputSeq.isEmpty()) {
-                        inputSeq += clickedColor
-                    } else {
-                        // Template Expressions: pieces of code that are evaluated and whose results are concatenated into a string
-                        inputSeq = "$inputSeq, $clickedColor"
-                    }
-                }
+                onColorClicked = { viewModel.onUserColorClicked(it) } // "it" represents the specific color String that the user clicked
             )
 
             // Column container for app logo, input sequence and action buttons
@@ -108,7 +111,7 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 }
 
                 SequenceDisplay(
-                    inputSeq,
+                    text = displayText,
                     textModifier = Modifier
                         .weight(3f)
                         .fillMaxWidth()
@@ -125,10 +128,12 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                     maxItemsInEachRow = 2
                 ) {
                     ActionButtons(
-                        onPauseClicked = { inputSeq = "" },
+                        isGameActive = uiState.isGameActive,
+                        onStartClicked = { viewModel.startGame() },
+                        onPauseClicked = { viewModel.pauseGame() },
                         onEndGameClicked = {
-                            onEndGameClicked(inputSeq)
-                            inputSeq = ""
+                            onEndGameClicked(uiState.sequence) // sends the sequence to HistoryScreen
+                            viewModel.resetGame()
                         },
                         buModifier = Modifier.weight(0.5f)
                     )
@@ -170,33 +175,12 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 ButtonGrid(
-                    colModifier = Modifier
-                        .weight(5f),
-
-                    onColorClicked = { clickedColor ->
-                        if (attempts > 0) {
-                            if (inputSeq.isEmpty())
-                                inputSeq += clickedColor
-                            else
-                                inputSeq = "$inputSeq, $clickedColor"
-
-                            // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/
-                            if (!(text.startsWith(inputSeq))) {
-                                text = "Game Over!"
-                                attempts = 0
-                            }
-
-                            attempts--
-
-                        } else {
-                            text = "Too many buttons pressed!"
-                        }
-                    }
+                    colModifier = Modifier.weight(5f),
+                    onColorClicked = { viewModel.onUserColorClicked(it) }
                 )
 
                 SequenceDisplay(
-                    // inputSeq,
-                    text,
+                    text = displayText,
                     textModifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
@@ -216,10 +200,12 @@ fun StartScreen(onEndGameClicked: (String) -> Unit) {
                 maxItemsInEachRow = 2
             ) {
                 ActionButtons(
-                    onPauseClicked = { inputSeq = "" },
+                    isGameActive = uiState.isGameActive,
+                    onStartClicked = { viewModel.startGame() },
+                    onPauseClicked = { viewModel.pauseGame() },
                     onEndGameClicked = {
-                        onEndGameClicked(inputSeq)
-                        inputSeq = ""
+                        onEndGameClicked(uiState.sequence) // sends the sequence to HistoryScreen
+                        viewModel.resetGame()
                     },
                     buModifier = Modifier.weight(0.5f)
                 )
@@ -248,7 +234,10 @@ fun AppLogo(logoModifier: Modifier, logoFontSize: TextUnit) {
 
 // Grid 3x2: a column of 3 rows, each containing 2 buttons
 @Composable
-fun ButtonGrid(colModifier: Modifier, onColorClicked: (String) -> Unit) {
+fun ButtonGrid(
+    colModifier: Modifier,
+    onColorClicked: (String) -> Unit
+) {
     Column(
         modifier = colModifier,
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -272,7 +261,7 @@ fun ButtonGrid(colModifier: Modifier, onColorClicked: (String) -> Unit) {
                     // When isClicked is true, the padding increases to 10.dp making the button to move inward
                     // animateDpAsState: instead of the value jumping instantly from 0 to 10, it calculates the intermediate values over time (1, 2, 3 ... 10)
                     val animatedPadding by animateDpAsState(
-                        targetValue = if (isClicked) 10.dp else 0.dp,
+                        targetValue = if (isClicked) 8.dp else 0.dp,
                         animationSpec = tween(durationMillis = 200),
                         label = "padding"
                     )
@@ -336,10 +325,9 @@ fun <K, V> Map<K, V>.chunked(size: Int): List<List<Map.Entry<K, V>>> {
 
 
 @Composable
-fun SequenceDisplay(inputSeq: String, textModifier: Modifier) {
+fun SequenceDisplay(text: String, textModifier: Modifier) {
     Text(
-        // Text component observes the state inputSeq and updates automatically
-        text = inputSeq,
+        text = text,
         modifier = textModifier,
         textAlign = TextAlign.Center,
         color = Color.White,
@@ -349,24 +337,34 @@ fun SequenceDisplay(inputSeq: String, textModifier: Modifier) {
 
 
 @Composable
-fun ActionButtons(onPauseClicked: () -> Unit, onEndGameClicked: () -> Unit, buModifier: Modifier) {
+fun ActionButtons(
+    isGameActive: Boolean,
+    onStartClicked: () -> Unit,
+    onPauseClicked: () -> Unit,
+    onEndGameClicked: () -> Unit,
+    buModifier: Modifier
+) {
     Button(
-        onClick = {}, // TO DO: create new game every time start button is clicked
+        onClick = onStartClicked,
         modifier = Modifier.fillMaxWidth(),
-        enabled = false
+        // The enabled state is the opposite of the game state:
+        // if the game is active, the button is disabled
+        // if the game is over, the button is enabled
+        enabled = !isGameActive
     ) {
         Text(text = stringResource(R.string.start_game))
     }
 
     Button(
         onClick = onPauseClicked,
-        modifier = buModifier
+        modifier = buModifier,
+        enabled = isGameActive // only enabled when the game is active, if not is disabled
     ) {
         Text(text = stringResource(R.string.pause))
     }
 
     Button(
-        onClick = onEndGameClicked, // TO DO: save game in database
+        onClick = onEndGameClicked,
         modifier = buModifier
     ) {
         Text(text = stringResource(R.string.end_game))
@@ -400,8 +398,9 @@ class GameConst {
 // Reference: https://developer.android.com/develop/ui/compose/tooling/previews
 // @Preview avoids reliance on the emulator in Android Studio
 // as this @Composable is shown in the design view of this file (with live updates)
-@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 800, heightDp = 400, locale = "it")
+@Preview(showBackground = true, widthDp = 400, heightDp = 800)
 @Composable
 fun StartScreenPreview() {
-    StartScreen(onEndGameClicked = {})
+    StartScreen(viewModel = viewModel(), onEndGameClicked = {})
 }

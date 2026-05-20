@@ -11,5 +11,8 @@
     <string name="score">Punteggio</string>
     <string name="input">Sequenza giocata</string>
     <string name="logo_description">Logo Simon Game</string>
-
+    <string name="press">Premi Avvia per giocare</string>
+    <string name="demo">Guarda attentamente...</string>
+    <string name="wrong">Sbagliato!</string>
+    <string name="exceed">Troppi pulsanti premuti!</string>
 </resources>

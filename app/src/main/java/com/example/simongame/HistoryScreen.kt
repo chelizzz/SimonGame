@@ -1,6 +1,5 @@
 package com.example.simongame
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,8 +36,7 @@ val games: MutableList<String> = mutableListOf()
 
 @Composable
 fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
-    val configuration = LocalConfiguration.current
-    val isLandscape = (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+    val isLandscape = isScreenLandscape()
     val screenPadding = if (isLandscape)
                             32.dp  // --- LANDSCAPE LAYOUT ---
                         else

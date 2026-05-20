@@ -10,4 +10,8 @@
     <string name="score">Score</string>
     <string name="input">Played sequence</string>
     <string name="logo_description">Simon Game Logo</string>
+    <string name="press">Press Start to play</string>
+    <string name="demo">Watch carefully...</string>
+    <string name="wrong">Game Over!</string>
+    <string name="exceed">Too many buttons pressed!</string>
 </resources>
