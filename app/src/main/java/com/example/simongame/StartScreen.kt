@@ -23,10 +23,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -42,8 +38,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.simongame.ui.theme.Gameria
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 
 // Reusable Composable function that returns a Boolean
@@ -92,7 +86,9 @@ fun StartScreen(
                         shape = RoundedCornerShape(25.dp)
                     )
                     .padding(20.dp),
-                onColorClicked = { viewModel.onUserColorClicked(it) } // "it" represents the specific color String that the user clicked
+                onColorClicked = { viewModel.onUserColorClicked(it) }, // "it" represents the specific color String that the user clicked
+                activeGlowKey = uiState.activeGlowKey,
+                isUserTurn = uiState.isUserTurn
             )
 
             // Column container for app logo, input sequence and action buttons
@@ -142,7 +138,7 @@ fun StartScreen(
         }
 
 
-        // --- PORTRAIT LAYOUT ---
+    // --- PORTRAIT LAYOUT ---
     } else {
         // Main column of the StartScreen
         Column(
@@ -176,7 +172,9 @@ fun StartScreen(
             ) {
                 ButtonGrid(
                     colModifier = Modifier.weight(5f),
-                    onColorClicked = { viewModel.onUserColorClicked(it) }
+                    onColorClicked = { viewModel.onUserColorClicked(it) },
+                    activeGlowKey = uiState.activeGlowKey,
+                    isUserTurn = uiState.isUserTurn
                 )
 
                 SequenceDisplay(
@@ -232,11 +230,18 @@ fun AppLogo(logoModifier: Modifier, logoFontSize: TextUnit) {
 }
 
 
-// Grid 3x2: a column of 3 rows, each containing 2 buttons
+/**
+ * ButtonGrid 3x2: a column of 3 rows, each containing 2 buttons.
+ * - activeGlowKey (Game State): tracks exactly which color is active globally
+ * - isGlowing (UI State): simple Boolean owned by the individual button
+ * This separation translates the global state into a local state for each button.
+ */
 @Composable
 fun ButtonGrid(
     colModifier: Modifier,
-    onColorClicked: (String) -> Unit
+    onColorClicked: (String) -> Unit,
+    activeGlowKey: String?,
+    isUserTurn: Boolean
 ) {
     Column(
         modifier = colModifier,
@@ -251,64 +256,26 @@ fun ButtonGrid(
                     .weight(1f), // each row occupies 1/3 of the column
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // The iterator color selects each entry-color from the pair
-                rowPair.forEach { color ->
-                    var isClicked by remember { mutableStateOf(false) }
+                // The iterator colorEntry selects each entry from the pair
+                rowPair.forEach { colorEntry ->
+                    val colorKey = colorEntry.key
+                    val baseColor = colorEntry.value
+                    val glowColor = GameConst.glowColors[colorKey] ?: baseColor
 
-                    // Since isClicked = false needs to happen after a time delay, a Coroutine is used so it doesn't block the UI thread
-                    val coroutineScope = rememberCoroutineScope()
+                    SimonButton(
+                        modifier = Modifier.weight(1f), // each button occupies 1/2 of the row
+                        baseColor = baseColor,
+                        glowColor = glowColor,
 
-                    // When isClicked is true, the padding increases to 10.dp making the button to move inward
-                    // animateDpAsState: instead of the value jumping instantly from 0 to 10, it calculates the intermediate values over time (1, 2, 3 ... 10)
-                    val animatedPadding by animateDpAsState(
-                        targetValue = if (isClicked) 8.dp else 0.dp,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "padding"
+                        // No remember, no coroutineScope, animation is handled by ViewModel
+                        // To trigger the animation (button recomposition) the value of activeGlowKey is set to the specific color key
+                        isGlowing = (activeGlowKey == colorKey),
+
+                        // Dim the button if it's not the user's turn
+                        isDimmed = !isUserTurn,
+
+                        onClick = { onColorClicked(colorKey) }
                     )
-
-                    // When isClicked is true, the color changes from transparent to a specific glow color
-                    val glowColor by animateColorAsState(
-                        targetValue = if (isClicked) GameConst.glowColors[color.key]!! else Color.Transparent,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "glow_color"
-                    )
-
-                    // When isClicked is true, the elevation increases to 20.dp making the button to emit "light"
-                    val glowElevation by animateDpAsState(
-                        targetValue = if (isClicked) 20.dp else 0.dp,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "glow_elevation"
-                    )
-
-                    Button(
-                        modifier = Modifier
-                            .weight(1f) // each button occupies 1/2 of the row
-                            .fillMaxSize()
-                            .shadow( // the button looks like it is emitting light onto the background
-                                elevation = glowElevation,
-                                shape = RoundedCornerShape(25),
-                                ambientColor = glowColor,
-                                spotColor = glowColor,
-                            )
-                            .padding(animatedPadding),
-                        // Reference: https://kotlinlang.org/docs/lambdas.html#function-types
-                        // ButtonGrid calls the function passed as parameter to be executed after click event
-                        // When invoked in StartScreen the function is then defined
-                        onClick = {
-                            // Check if the animation isn't launched already
-                            if (!isClicked) {
-                                // The button stays in the "glowing" state for 350ms and then automatically switches back to the normal state
-                                coroutineScope.launch {
-                                    isClicked = true
-                                    delay(350)
-                                    isClicked = false
-                                }
-                            }
-                            onColorClicked(color.key)
-                        },
-                        shape = RoundedCornerShape(25),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isClicked) GameConst.glowColors[color.key]!! else color.value)
-                    ) {}
                 }
             }
         }
@@ -321,6 +288,76 @@ fun ButtonGrid(
 fun <K, V> Map<K, V>.chunked(size: Int): List<List<Map.Entry<K, V>>> {
     return this.entries // returns an Iterable, a set of entries
         .chunked(size) // the std method splits the entries into a list of lists
+}
+
+
+/**
+ * SimonButton represents a single, stateless button in the Simon Game.
+ * This component is extracted to minimize the recomposition scope.
+ * By isolating it, only the button with a changing state recomposes,
+ * preventing unnecessary recompositions of the entire grid.
+ */
+@Composable
+fun SimonButton(
+    modifier: Modifier,
+    baseColor: Color,
+    glowColor: Color,
+    isGlowing: Boolean,
+    // Visual representation of isUserTurn: lowers alpha and disables clicks
+    isDimmed: Boolean,
+    onClick: () -> Unit
+) {
+    // All animations are encapsulated here, reacting ONLY to local boolean states
+
+    // When isGlowing is true, the padding increases to 8.dp making the button move inward.
+    // animateDpAsState: instead of the value jumping instantly from 0 to 8, it calculates the intermediate values over time (1, 2, 3 ... 8)
+    val animatedPadding by animateDpAsState(
+        targetValue = if (isGlowing) 8.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "padding"
+    )
+
+    // Dynamically resolves the button's color based on its current state
+    val currentContainerColor by animateColorAsState(
+        targetValue = when {
+            isGlowing -> glowColor
+            isDimmed -> baseColor.copy(alpha = 0.6f) // if dimmed, reduce opacity to 60%
+            else -> baseColor
+        },
+        animationSpec = tween(durationMillis = 200),
+        label = "glow_color"
+    )
+
+    // When isGlowing is true, the elevation increases to 20.dp making the button emit "light"
+    val glowElevation by animateDpAsState(
+        targetValue = if (isGlowing) 20.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "glow_elevation"
+    )
+
+    Button(
+        modifier = modifier
+            .fillMaxSize()
+            .shadow( // the button looks like it is emitting light onto the background
+                elevation = glowElevation,
+                shape = RoundedCornerShape(25),
+                ambientColor = if (isGlowing) glowColor else Color.Transparent,
+                spotColor = if (isGlowing) glowColor else Color.Transparent,
+            )
+            .padding(animatedPadding),
+        // Reference: https://kotlinlang.org/docs/lambdas.html#function-types
+        // ButtonGrid calls the function passed as parameter to be executed after click event
+        // When invoked in StartScreen the function is then defined
+        onClick = onClick,
+        enabled = !isDimmed, // Disabilita anche fisicamente il click in Compose
+        shape = RoundedCornerShape(25),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = currentContainerColor,
+            // Rimuoviamo l'effetto grigio standard di Compose per i bottoni disabilitati,
+            // perché stiamo già gestendo noi il colore scuro in modo personalizzato!
+            disabledContainerColor = currentContainerColor
+        )
+    ) {}
 }
 
 
