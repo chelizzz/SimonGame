@@ -12,6 +12,5 @@
     <string name="input">Sequenza giocata</string>
     <string name="logo_description">Logo Simon Game</string>
     <string name="press">Premi Avvia per giocare</string>
-    <string name="demo">Guarda attentamente...</string>
-    <string name="fail">Sbagliato!</string>
+    <string name="fail">Sbagliato!\n(torna indietro per ricominciare)</string>
 </resources>

@@ -51,7 +51,7 @@ fun isScreenLandscape(): Boolean {
 @Composable
 fun StartScreen(
     viewModel: GameViewModel,
-    onEndGameClicked: (String) -> Unit
+    onEndGameClicked: () -> Unit
 ) {
     val isLandscape = isScreenLandscape()
 
@@ -63,7 +63,7 @@ fun StartScreen(
     // The evaluated text is displayed inside the SequenceDisplay next to the ButtonGrid
     // If messageRes is NOT null, ?.let resolves the string resource
     // If it is null, the ?: safe call operator displays the input sequence
-    val displayText = uiState.messageRes?.let { stringResource(it) } ?: uiState.sequence
+    val displayText = uiState.messageRes?.let { stringResource(it) } ?: uiState.currentInput
 
 
     // --- LANDSCAPE LAYOUT ---
@@ -124,12 +124,16 @@ fun StartScreen(
                     maxItemsInEachRow = 2
                 ) {
                     ActionButtons(
+                        // Enabled only at the initial screen launch, when the game is not active and "press" string is showing
+                        isStartEnabled = !uiState.isGameActive && (displayText == stringResource(R.string.press)),
                         isGameActive = uiState.isGameActive,
+                        isUserTurn = uiState.isUserTurn,
+                        isPaused = uiState.isPaused,
                         onStartClicked = { viewModel.startGame() },
                         onPauseClicked = { viewModel.pauseGame() },
                         onEndGameClicked = {
-                            onEndGameClicked(uiState.sequence) // sends the sequence to HistoryScreen
-                            viewModel.resetGame()
+                            viewModel.endGame() // saves the current game
+                            onEndGameClicked() // navigates to HistoryScreen
                         },
                         buModifier = Modifier.weight(0.5f)
                     )
@@ -198,12 +202,16 @@ fun StartScreen(
                 maxItemsInEachRow = 2
             ) {
                 ActionButtons(
+                    // Enabled only at the initial screen launch, when the game is not active and "press" string is showing
+                    isStartEnabled = !uiState.isGameActive && (displayText == stringResource(R.string.press)),
                     isGameActive = uiState.isGameActive,
+                    isUserTurn = uiState.isUserTurn,
+                    isPaused = uiState.isPaused,
                     onStartClicked = { viewModel.startGame() },
                     onPauseClicked = { viewModel.pauseGame() },
                     onEndGameClicked = {
-                        onEndGameClicked(uiState.sequence) // sends the sequence to HistoryScreen
-                        viewModel.resetGame()
+                        viewModel.endGame() // saves the current game
+                        onEndGameClicked() // navigates to HistoryScreen
                     },
                     buModifier = Modifier.weight(0.5f)
                 )
@@ -303,8 +311,7 @@ fun SimonButton(
     baseColor: Color,
     glowColor: Color,
     isGlowing: Boolean,
-    // Visual representation of isUserTurn: lowers alpha and disables clicks
-    isDimmed: Boolean,
+    isDimmed: Boolean, // visual representation of isUserTurn: lowers alpha and disables clicks
     onClick: () -> Unit
 ) {
     // All animations are encapsulated here, reacting ONLY to local boolean states
@@ -375,7 +382,10 @@ fun SequenceDisplay(text: String, textModifier: Modifier) {
 
 @Composable
 fun ActionButtons(
+    isStartEnabled: Boolean,
     isGameActive: Boolean,
+    isUserTurn: Boolean,
+    isPaused: Boolean,
     onStartClicked: () -> Unit,
     onPauseClicked: () -> Unit,
     onEndGameClicked: () -> Unit,
@@ -384,10 +394,7 @@ fun ActionButtons(
     Button(
         onClick = onStartClicked,
         modifier = Modifier.fillMaxWidth(),
-        // The enabled state is the opposite of the game state:
-        // if the game is active, the button is disabled
-        // if the game is over, the button is enabled
-        enabled = !isGameActive
+        enabled = isStartEnabled
     ) {
         Text(text = stringResource(R.string.start_game))
     }
@@ -395,14 +402,18 @@ fun ActionButtons(
     Button(
         onClick = onPauseClicked,
         modifier = buModifier,
-        enabled = isGameActive // only enabled when the game is active, if not is disabled
+        // The pause-resume-button is only enabled during computer demo, when is not the user turn to play
+        // or during pause state in other to click again to resume
+        enabled = (isGameActive && !isUserTurn) || isPaused
     ) {
-        Text(text = stringResource(R.string.pause))
+        val buText = if (isPaused) stringResource(R.string.resume) else stringResource(R.string.pause)
+        Text(text = buText)
     }
 
     Button(
         onClick = onEndGameClicked,
-        modifier = buModifier
+        modifier = buModifier,
+        enabled = isGameActive // enabled until game over
     ) {
         Text(text = stringResource(R.string.end_game))
     }

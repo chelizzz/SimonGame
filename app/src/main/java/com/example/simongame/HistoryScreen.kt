@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,19 +29,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-
-// Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/
-// List of all the games played
-val games: MutableList<String> = mutableListOf()
 
 @Composable
-fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
+fun HistoryScreen(
+    viewModel: GameViewModel,
+    onNextClicked: () -> Unit,
+    onInputClicked: (String) -> Unit
+) {
     val isLandscape = isScreenLandscape()
     val screenPadding = if (isLandscape)
                             32.dp  // --- LANDSCAPE LAYOUT ---
                         else
                             16.dp // --- PORTRAIT LAYOUT ---
+
+    // The list of GameEntity objects
+    val games by viewModel.gamesHistory.collectAsStateWithLifecycle()
 
     // Reference: https://developer.android.com/develop/ui/compose/lists
     // Displays the full history as a scrollable list
@@ -76,13 +82,16 @@ fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
                 style = MaterialTheme.typography.bodyMedium)
         }
 
-        // Adds a list of games played to the LazyColumn, reversed so the most recent game appears first
-        items(games.asReversed()) { game ->
+        // Adds a list of games played to the LazyColumn (the most recent game appears first)
+        items(games) { gameEntity ->
             Spacer(modifier = Modifier.height(16.dp))
 
-            // iterator of games returns a String (game) and passes it as parameter to DrawInput
-            DrawInput(game, rowMod = Modifier
-                    .clickable(onClick = { onInputClicked(game) }) // Modifier.clickable: adds click behavior to any composable
+            // Extract the input sequence string from gameEntity and draw it
+            DrawInput(
+                game = gameEntity,
+                rowMod = Modifier
+                    // Adds click behavior to the composable
+                    .clickable(onClick = { onInputClicked(gameEntity.sequence) })
                     .background(
                         color = GameConst.panelColor,
                         shape = RoundedCornerShape(15.dp)
@@ -95,12 +104,12 @@ fun HistoryScreen(onNextClicked: () -> Unit, onInputClicked: (String) -> Unit) {
 }
 
 
-// Renders a single game row: if the sequence is too long to fit, only the beginning is shown followed by a "…" indicator
+// Renders a single game row: if the input sequence is too long to fit, only the beginning is shown followed by a "…" indicator
 @Composable
-fun DrawInput(input: String, rowMod: Modifier) {
+fun DrawInput(game: GameEntity, rowMod: Modifier) {
     // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/
-    val items = if (input.isNotEmpty()) // without this check the app crashes with a bug
-                    input.split(", ") // split the comma-separated sequence and return a list of individual color labels
+    val items = if (game.sequence.isNotEmpty()) // without this check the app crashes with a bug
+                    game.sequence.split(", ") // split the comma-separated sequence and return a list of individual color labels
                 else
                     emptyList()
 
@@ -110,9 +119,9 @@ fun DrawInput(input: String, rowMod: Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(15.dp)
     ) {
-        // Total number of buttons pressed in this game
+        // Maximum score obtained during this game
         Text(
-            text = "${items.size} ",
+            text = "${game.score} ",
             color = Color.White,
             fontSize = 20.sp
         )
@@ -141,12 +150,21 @@ fun DrawInput(input: String, rowMod: Modifier) {
                 horizontalArrangement = Arrangement.spacedBy(tagSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                items.take(maxVisible).forEach { item ->
+                items.take(maxVisible).forEachIndexed { index, item ->
+                    // If the index is less than the score, it's a CORRECT color (GameConst)
+                    // If the index is >= the score, it's a WRONG color (Gray)
+                    val tagColor = if (index < game.score) {
+                                       // Returns the value corresponding to the given key [item],
+                                       // or Color.Gray if such a key is not present in the map (?: - elvis operator)
+                                       GameConst.buColors[item] ?: Color.Gray
+                                   } else {
+                                       Color.Gray // different color for the error
+                                   }
+
                     Text(
                         modifier = Modifier
                             .background(
-                                // Returns the value corresponding to the given key [item], or Color.Gray if such a key is not present in the map (?: - elvis operator)
-                                color = GameConst.buColors[item] ?: Color.Gray,
+                                color = tagColor,
                                 shape = RoundedCornerShape(5.dp)
                             )
                             .padding(8.dp), // inner color-tag padding
@@ -174,5 +192,5 @@ fun DrawInput(input: String, rowMod: Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun HistoryScreenPreview() {
-    HistoryScreen(onNextClicked = {}, onInputClicked = {})
+    HistoryScreen(viewModel = viewModel(), onNextClicked = {}, onInputClicked = {})
 }

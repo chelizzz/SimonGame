@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.simongame.ui.theme.SimonGameTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,12 +28,21 @@ class MainActivity : ComponentActivity() {
                 // Reference: https://developer.android.com/develop/ui/compose/navigation
                 val navController = rememberNavController()
 
+                // --- PERSISTENT STATE ---
+                // 1. Initialize the database using applicationContext (lives for the entire lifecycle of the app
+                // and it is not destroyed and recreated on screen rotations)
+                val database = GameRoomDatabase.getDatabase(applicationContext)
+
+                // 2. Initialize the repository using the DAO
+                val repository = GameRepository(database.gameDao())
+
+                // 3. Initialize the gameViewModel using the repository
+                val gameViewModel: GameViewModel = viewModel{
+                    GameViewModel(repository)
+                }
+
                 // The scaffold fills the whole display area
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Initialization of the ViewModel variable which survives as long as the MainActivity is alive
-                    // (it's not destroyed when navigating between the screens)
-                    val gameViewModel: GameViewModel = viewModel()
-
                     NavHost(
                         navController = navController,
                         startDestination = "history",
@@ -41,6 +51,7 @@ class MainActivity : ComponentActivity() {
                         // Defines the destination "history" in the navigation graph
                         composable("history") {
                             HistoryScreen(
+                                viewModel = gameViewModel,
                                 onNextClicked = {
                                     navController.navigate("start") {
                                         // Reference: https://developer.android.com/guide/navigation/backstack#pop
@@ -73,9 +84,8 @@ class MainActivity : ComponentActivity() {
                         composable("start") {
                             StartScreen(
                                 viewModel = gameViewModel,
-                                // When the button in StartScreen is clicked, onEndGameClicked is triggered and adds the latest game sequence to the history list
-                                onEndGameClicked = { sequence ->
-                                    games.add(sequence) // the call is here to avoid duplicates during recomposition
+                                // When the button in StartScreen is clicked, onEndGameClicked is triggered and navigates to "history"
+                                onEndGameClicked = {
                                     navController.navigate("history") {
                                         popUpTo("history") { inclusive = true }
                                     }
