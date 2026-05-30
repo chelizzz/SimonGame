@@ -113,6 +113,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         // Turn ON the glow animation by setting the activeGlowKey to the targeted color
         _uiState.update { it.copy(activeGlowKey = colorKey) }
 
+        // Play the corresponding sound effect
+        sound.play(colorKey)
+
         // The duration the button remains physically illuminated
         delay(350)
 
@@ -148,6 +151,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val isRoundWon = (input == computerSequence)
 
         if (isFailed) {
+            sound.play("fail")
+
             // UPDATE UI STATE
             _uiState.update { state ->
                 state.copy(
@@ -293,5 +298,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 )
             )
         }
+    }
+
+
+    // --- SOUND EFFECT ---
+
+    private val sound = SoundManager()
+
+    // The SoundManager class and its AudioTrack are destroyed alongside the ViewModel
+    override fun onCleared() {
+        super.onCleared()
+        sound.release()
     }
 }
