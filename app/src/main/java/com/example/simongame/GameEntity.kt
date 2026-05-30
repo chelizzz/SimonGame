@@ -12,5 +12,6 @@ data class GameEntity(
     // when a new entity instance is inserted into the database
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val score: Int,
-    val sequence: String
+    val sequence: String,
+    val clicks: Int
 )

@@ -60,23 +60,27 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("start") { inclusive = true }
                                     }
                                 },
-                                // When a single game row in HistoryScreen is clicked, onInputClicked is triggered with a parameter s (e.g. "R, G, B, M, Y, C")
-                                onInputClicked = { s ->
-                                    // The string route "detail/${s}" indicates the app to navigate to the detail screen, appending the value of the variable s (string interpolation)
-                                    navController.navigate("detail/${s}") {
-                                        popUpTo("detail/${s}") { inclusive = true }
+                                // When a single game row in HistoryScreen is clicked, onInputClicked is triggered with the parameters:
+                                // score (e.g. 5), sequence (e.g. "R, G, B, M, Y, C"), clicks (e.g. 3)
+                                onInputClicked = { score, sequence, clicks ->
+                                    // The string route "detail/$s/$s/$c" indicates the app to navigate to the detail screen, appending the value of the variables (string interpolation)
+                                    navController.navigate("detail/$score/$sequence/$clicks") {
+                                        popUpTo("detail/$score/$sequence/$clicks") { inclusive = true }
                                     }
                                 }
                             )
                         }
 
-                        // Defines the destination "detail" in the navigation graph, where {sequence} acts like a variable in the URL
-                        composable("detail/{sequence}") { backStackEntry ->
+                        // Defines the destination "detail" in the navigation graph, where {score}, {sequence}, {clicks} act like variables in the URL
+                        composable("detail/{score}/{sequence}/{clicks}") { backStackEntry ->
                             DetailScreen(
-                                // backStackEntry.arguments: holds information about the current destination, including the argument (s) passed through the navigation route
-                                // ?.getString("sequence"): ? (safe call operator) since arguments could be null, it ensures the app doesn't crash and the expression returns null
+                                // backStackEntry.arguments: holds information about the current destination, including the argument passed through the navigation route
+                                // ?.getString(): ? (safe call operator) since arguments could be null, it ensures the app doesn't crash and the expression returns null
                                 // orEmpty(): Kotlin helper function for Strings, if getString returns null, it returns an empty string
-                                sequence = backStackEntry.arguments?.getString("sequence").orEmpty()
+                                // ?.toIntOrNull() ?: 0: converts the string into an integer, if it returns null, it use 0 instead
+                                score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0,
+                                sequence = backStackEntry.arguments?.getString("sequence").orEmpty(),
+                                clicks = backStackEntry.arguments?.getString("clicks")?.toIntOrNull() ?: 0
                             )
                         }
 

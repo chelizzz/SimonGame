@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 
 
 @Composable
-fun DetailScreen(sequence: String) {
+fun DetailScreen(score: Int, sequence: String, clicks: Int) {
     val isLandscape = isScreenLandscape()
     val screenPadding = if (isLandscape)
                             32.dp  // --- LANDSCAPE LAYOUT ---
@@ -40,31 +40,27 @@ fun DetailScreen(sequence: String) {
             .background(GameConst.backgroundColorOne)
             .padding(screenPadding)
     ) {
-        //Spacer(modifier = Modifier.height(16.dp))
-
         Text(
             text = stringResource(R.string.detail),
             color = Color.White,
             style = MaterialTheme.typography.headlineMedium
         )
 
-            //)
         Spacer(modifier = Modifier.height(16.dp))
 
-        DrawDetail(sequence) // receives the color sequence from HistoryScreen via MainActivity
+        DrawDetail(score, sequence, clicks) // receives the parameters from HistoryScreen via MainActivity
     }
 }
 
 
 @Composable
-fun DrawDetail(input: String) {
-    // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/
-    val items = if (input.isNotEmpty()) // without this check the app crashes with a bug
-        input.split(", ") // split the comma-separated sequence and return a list of individual color labels
+fun DrawDetail(score: Int, sequence: String, clicks: Int) {
+    val colorKeys = if (sequence.isNotBlank())
+        sequence.split(", ")
     else
         emptyList()
 
-    // Comprehensive row of the game: count on the left, sequence on the right
+    // Comprehensive row of the game: score on the left, sequence on the right
     Row(
         modifier = Modifier
             .background(
@@ -86,9 +82,9 @@ fun DrawDetail(input: String) {
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            // Total number of buttons pressed in this game
+            // Maximum score obtained during this game
             Text(
-                text = "${items.size} ",
+                text = "$score",
                 color = Color.White,
                 fontSize = 50.sp,
                 fontWeight = FontWeight.Bold
@@ -113,16 +109,23 @@ fun DrawDetail(input: String) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
-                items.forEach { item ->
+                colorKeys.forEachIndexed { index, key ->
+                    // If the color tag index is less than the user's correct clicks, apply its color.
+                    // Otherwise (it is the error or it was never pressed), make it gray.
+                    val tagColor = if (index < clicks) {
+                        GameConst.buColors[key] ?: Color.Gray
+                    } else {
+                        Color.Gray
+                    }
+
                     Text(
                         modifier = Modifier
                             .background(
-                                // Returns the value corresponding to the given key [item], or Color.Gray if such a key is not present in the map (?: - elvis operator)
-                                color = GameConst.buColors[item] ?: Color.Gray,
+                                color = tagColor,
                                 shape = RoundedCornerShape(5.dp)
                             )
                             .padding(10.dp), // inner color-tag padding
-                        text = item,
+                        text = key,
                         color = Color.White,
                         fontSize = 20.sp,
                     )
@@ -136,6 +139,6 @@ fun DrawDetail(input: String) {
 @Preview(showBackground = true)
 @Composable
 fun DetailScreenPreview() {
-    DetailScreen(sequence = "R, G, B, M, Y, C")
+    DetailScreen(score = 5, sequence = "R, G, B, M, Y, C", clicks = 3)
 }
 

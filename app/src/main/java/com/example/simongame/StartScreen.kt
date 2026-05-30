@@ -1,6 +1,7 @@
 package com.example.simongame
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -211,12 +212,22 @@ fun StartScreen(
                     onPauseClicked = { viewModel.pauseGame() },
                     onEndGameClicked = {
                         viewModel.endGame() // saves the current game
-                        onEndGameClicked() // navigates to HistoryScreen
+                        onEndGameClicked() // navigates to the HistoryScreen
                     },
                     buModifier = Modifier.weight(0.5f)
                 )
             }
         }
+    }
+
+
+    // --- SYSTEM BACK BUTTON HANDLING ---
+
+    // Reference: https://developer.android.com/guide/navigation/custom-back
+    // Reference: https://developer.android.com/reference/kotlin/androidx/activity/compose/BackHandler.composable
+    BackHandler(true) {
+        viewModel.endGame() // saves the current game if active
+        onEndGameClicked() // navigates to the HistoryScreen
     }
 }
 
@@ -356,12 +367,10 @@ fun SimonButton(
         // ButtonGrid calls the function passed as parameter to be executed after click event
         // When invoked in StartScreen the function is then defined
         onClick = onClick,
-        enabled = !isDimmed, // Disabilita anche fisicamente il click in Compose
+        enabled = !isDimmed,
         shape = RoundedCornerShape(25),
         colors = ButtonDefaults.buttonColors(
             containerColor = currentContainerColor,
-            // Rimuoviamo l'effetto grigio standard di Compose per i bottoni disabilitati,
-            // perché stiamo già gestendo noi il colore scuro in modo personalizzato!
             disabledContainerColor = currentContainerColor
         )
     ) {}

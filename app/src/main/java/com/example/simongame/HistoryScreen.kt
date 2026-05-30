@@ -37,7 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun HistoryScreen(
     viewModel: GameViewModel,
     onNextClicked: () -> Unit,
-    onInputClicked: (String) -> Unit
+    onInputClicked: (Int, String, Int) -> Unit
 ) {
     val isLandscape = isScreenLandscape()
     val screenPadding = if (isLandscape)
@@ -64,7 +64,7 @@ fun HistoryScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Floating action button."
+                    contentDescription = "Add game"
                 )
             }
         }
@@ -77,7 +77,7 @@ fun HistoryScreen(
                 color = Color.White,
                 style = MaterialTheme.typography.headlineMedium)
             Text(
-                text = stringResource(R.string.games) + " " + games.size,
+                text = "${stringResource(R.string.games)} ${games.size}",
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium)
         }
@@ -90,14 +90,14 @@ fun HistoryScreen(
             DrawInput(
                 game = gameEntity,
                 rowMod = Modifier
-                    // Adds click behavior to the composable
-                    .clickable(onClick = { onInputClicked(gameEntity.sequence) })
+                    .fillMaxWidth()
                     .background(
                         color = GameConst.panelColor,
                         shape = RoundedCornerShape(15.dp)
                     )
+                    // Adds click behavior to the composable
+                    .clickable(onClick = { onInputClicked(gameEntity.score, gameEntity.sequence, gameEntity.clicks) }) // navigates to DetailScreen
                     .padding(15.dp)
-                    .fillMaxWidth()
             )
         }
     }
@@ -108,7 +108,7 @@ fun HistoryScreen(
 @Composable
 fun DrawInput(game: GameEntity, rowMod: Modifier) {
     // Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/
-    val items = if (game.sequence.isNotEmpty()) // without this check the app crashes with a bug
+    val colorKeys = if (game.sequence.isNotBlank()) // without this check the app crashes with a bug
                     game.sequence.split(", ") // split the comma-separated sequence and return a list of individual color labels
                 else
                     emptyList()
@@ -138,10 +138,10 @@ fun DrawInput(game: GameEntity, rowMod: Modifier) {
 
             // maxWidth: specific property in BoxWithConstraintsScope that describes the total horizontal space available in the Row
             // .toInt(): rounds down the result (e.g. 4.8 becomes 4, because you cannot display 80% of a tag)
-            val maxAllowed = (maxWidth / (tagWidth + tagSpacing)).toInt() // number of color tags that fit without a truncation indicator
-            val isTruncated = items.size > maxAllowed
+            val maxAllowed = (maxWidth.value / (tagWidth.value + tagSpacing.value)).toInt() // number of color tags that fit without a truncation indicator
+            val isTruncated = colorKeys.size > maxAllowed
             val maxVisible   = if (isTruncated)
-                                    ((maxWidth - tagWidth) / (tagWidth + tagSpacing)).toInt() // removes tagWidth from maxWidth to reserve the space for indicator
+                                    ((maxWidth.value - tagWidth.value) / (tagWidth.value + tagSpacing.value)).toInt() // removes tagWidth from maxWidth to reserve the space for indicator
                                 else
                                     maxAllowed
 
@@ -150,13 +150,13 @@ fun DrawInput(game: GameEntity, rowMod: Modifier) {
                 horizontalArrangement = Arrangement.spacedBy(tagSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                items.take(maxVisible).forEachIndexed { index, item ->
-                    // If the index is less than the score, it's a CORRECT color (GameConst)
-                    // If the index is >= the score, it's a WRONG color (Gray)
-                    val tagColor = if (index < game.score) {
-                                       // Returns the value corresponding to the given key [item],
+                colorKeys.take(maxVisible).forEachIndexed { index, key ->
+                    // If the color tag index is less than the user's correct clicks, apply its color.
+                    // Otherwise (it is the error or it was never pressed), make it gray.
+                    val tagColor = if (index < game.clicks) {
+                                       // Returns the value corresponding to the given [key],
                                        // or Color.Gray if such a key is not present in the map (?: - elvis operator)
-                                       GameConst.buColors[item] ?: Color.Gray
+                                       GameConst.buColors[key] ?: Color.Gray
                                    } else {
                                        Color.Gray // different color for the error
                                    }
@@ -168,7 +168,7 @@ fun DrawInput(game: GameEntity, rowMod: Modifier) {
                                 shape = RoundedCornerShape(5.dp)
                             )
                             .padding(8.dp), // inner color-tag padding
-                        text = item,
+                        text = key,
                         color = Color.White,
                         fontSize = 15.sp,
                     )
@@ -192,5 +192,5 @@ fun DrawInput(game: GameEntity, rowMod: Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun HistoryScreenPreview() {
-    HistoryScreen(viewModel = viewModel(), onNextClicked = {}, onInputClicked = {})
+    HistoryScreen(viewModel = viewModel(), onNextClicked = {}, onInputClicked = { _, _, _ ->})
 }

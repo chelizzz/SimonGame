@@ -3,7 +3,6 @@ package com.example.simongame
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +17,7 @@ import java.util.Collections.emptyList
 // Represents UI state for the Simon Game
 data class GameUIState(
     val currentInput: String = "",
-    var clicksLeft: Int = 0,
+    val clicksLeft: Int = 0,
     val isGameActive: Boolean = false,
     val messageRes: Int? = R.string.press,
     val activeGlowKey: String? = null, // null = no buttons glowing; "R" = red button glowing, etc.
@@ -164,16 +163,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 )
             }
 
-            // The maximum score is obtained by subtracting 1 for the error
-            val score = computerSequence.split(",").size - 1
-            saveCurrentGame(score) // save the score to the database
-
-            // Launch a parallel coroutine that waits for the glow animation to finish before dimming the entire board
-            viewModelScope.launch {
-                delay(350)
-                // After 350ms, the glow animation is complete: dim the grid and lock user input
-                _uiState.update { it.copy(isUserTurn = false) }
-            }
+            // Based on the completed rounds, the maximum score is obtained by subtracting 1 for the error
+            val score = computerSequence.split(", ").size - 1
+            // Based on the user's current input, the correct clicks are obtained by subtracting 1 for the error
+            val correctClicks = input.split(", ").size - 1
+            saveCurrentGame(score, correctClicks) // save the game to the database
 
         } else if (isRoundWon) {
             // UPDATE UI STATE
@@ -187,7 +181,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             // Lock user input while preparing the next round
             viewModelScope.launch {
                 delay(350)
-                _uiState.update { it.copy(isUserTurn = false) }
+                _uiState.update { state ->
+                    state.copy(
+                        isUserTurn = false,
+                        currentInput = "", // clear the user's input on screen
+                ) }
             }
 
             // The user completed the sequence, start the next round
@@ -199,7 +197,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             _uiState.update { state ->
                 state.copy(
                     currentInput = input,
-                    clicksLeft = state.clicksLeft-- // correct input but the sequence is not yet complete
+                    clicksLeft = state.clicksLeft - 1 // correct input but the sequence is not yet complete
                 )
             }
         }
@@ -237,30 +235,43 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
 
     fun endGame() {
-        // Safety check: the action is only enabled during an active game
-        if (!_uiState.value.isGameActive) return
+        // Safety check: if the game is already over, reset the UI state and exit
+        if (!_uiState.value.isGameActive) {
+            computerSequence = ""
+            _uiState.value = GameUIState()
+            return
+        }
 
         // Extract state variables for better readability
         val isUserTurn = _uiState.value.isUserTurn
         val currentInput = _uiState.value.currentInput
 
         // Calculate the current round
-        val round = computerSequence.split(",").size
+        val round = computerSequence.split(", ").size
 
         // CASE 1: The very first sequence demo is playing (round == 1 && !isUserTurn)
         // -> do not save anything to the database
         if (round > 1 || isUserTurn) {
+
+            val score: Int
+            val correctClicks: Int
+
             // CASE 2: A sequence demo is playing OR it's the user's turn but no buttons pressed yet
             // -> the user only completed the previous rounds
-            val score = if ((round > 1 && !isUserTurn) || (isUserTurn && currentInput.isEmpty())) {
-                            round - 1
-                            // CASE 3: It's the user's turn and at least one correct button is pressed
-                            // -> include all correctly pressed buttons from this round
-                        } else {
-                            round
-                        }
+            if ((round > 1 && !isUserTurn) || (isUserTurn && currentInput.isEmpty())) {
+                score = round - 1
+                // If the user quits without clicking, zero buttons are illuminated in the history
+                correctClicks = 0
 
-            saveCurrentGame(score) // save the score to the database
+                // CASE 3: It's the user's turn and at least one correct button is pressed
+                // -> include all correctly pressed buttons from this round
+            } else {
+                score = round
+                // Counts the actual clicks from the input string
+                correctClicks = currentInput.split(", ").size
+            }
+
+            saveCurrentGame(score, correctClicks) // save the game to the database
         }
 
         demoJob?.cancel() // stop the demo
@@ -289,12 +300,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
 
     // Launches a new coroutine to insert the data without blocking the main UI thread
-    private fun saveCurrentGame(score: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
+    private fun saveCurrentGame(score: Int, correctClicks: Int) {
+        // No need for Dispatcher.IO parameter; although it launches on the Main Thread,
+        // when it hits repository.insert(), Room shifts execution to the background (suspend fun)
+        viewModelScope.launch {
             repository.insert(
                 GameEntity(
                     score = score,
-                    sequence = computerSequence
+                    sequence = computerSequence,
+                    clicks = correctClicks
                 )
             )
         }
