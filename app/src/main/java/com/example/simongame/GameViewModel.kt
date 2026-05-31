@@ -1,6 +1,7 @@
 package com.example.simongame
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -11,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Collections.emptyList
 
 
 // Represents UI state for the Simon Game
@@ -28,7 +28,10 @@ data class GameUIState(
 
 // Reference: https://developer.android.com/topic/libraries/architecture/viewmodel
 // The purpose of ViewModel is to encapsulate the data for the UI layer
-class GameViewModel(private val repository: GameRepository) : ViewModel() {
+class GameViewModel(
+    private val repository: GameRepository,
+    // private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
     // Expose UI state
     private val _uiState = MutableStateFlow(GameUIState())
     val uiState = _uiState.asStateFlow()
@@ -41,14 +44,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private var glowJob: Job? = null
     // Tracks the ongoing demo coroutine to allow cancellation
     private var demoJob: Job? = null
+    // Tracks the ongoing delay coroutine to allow cancellation
+    private var delayJob: Job? = null
 
 
     // --- UI ACTIONS ---
 
     fun startGame() {
+        delayJob?.cancel() // cancel any ongoing delay to avoid overlapping
+
         // Launched in a coroutine to add a specific startup delay
         // This avoids putting the delay inside showDemo(), which would cause an unwanted double delay (startNextRound)
-        viewModelScope.launch {
+        delayJob = viewModelScope.launch {
             // UPDATE UI STATE
             _uiState.update { state ->
                 state.copy(
@@ -125,7 +132,6 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun onUserColorClicked(clickedColor: String) {
         // SAFETY LOCK: Ignore clicks during the computer's demo or game over
-        // If the user spams buttons, execution stops here preventing useless calculations
         if (!_uiState.value.isUserTurn) return
 
         // Cancel any ongoing glow animation to prevent visual glitches with the user clicks
@@ -152,6 +158,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         if (isFailed) {
             sound.play("fail")
 
+            // Stop any pending coroutines on Game Over
+            demoJob?.cancel()
+            glowJob?.cancel()
+            delayJob?.cancel()
+
             // UPDATE UI STATE
             _uiState.update { state ->
                 state.copy(
@@ -159,6 +170,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     clicksLeft = 0, // game over
                     isGameActive = false, // game over
                     messageRes = R.string.fail,
+                    activeGlowKey = null, // turn off any glowing button
                     isUserTurn = false // the user can no longer play the current game
                 )
             }
@@ -174,18 +186,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             _uiState.update { state ->
                 state.copy(
                     currentInput = input,
-                    clicksLeft = 0 // round cleared
+                    clicksLeft = 0, // round cleared
+                    isUserTurn = false // prevents click spamming
                 )
-            }
-
-            // Lock user input while preparing the next round
-            viewModelScope.launch {
-                delay(350)
-                _uiState.update { state ->
-                    state.copy(
-                        isUserTurn = false,
-                        currentInput = "", // clear the user's input on screen
-                ) }
             }
 
             // The user completed the sequence, start the next round
@@ -205,8 +208,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
 
     private fun startNextRound() {
-        viewModelScope.launch {
-            delay(1100) // little break before the next round begins
+        delayJob?.cancel()
+
+        // Track delay to prevent generating new colors if the game ends during the 1100ms wait
+        delayJob = viewModelScope.launch {
+            delay(350) // to see the glow of the last clicked button
+
+            // Clear the user input from the screen
+            _uiState.update { it.copy(currentInput = "") }
+
+            delay(750) // little break before the next round begins
 
             val randomColor = availableColors.random()
             computerSequence = "$computerSequence, $randomColor"
@@ -253,21 +264,19 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         // -> do not save anything to the database
         if (round > 1 || isUserTurn) {
 
-            val score: Int
+            // Since the user is in the middle of a round and hasn't finished it,
+            // the user only completed the previous rounds
+            val score = round - 1
             val correctClicks: Int
 
             // CASE 2: A sequence demo is playing OR it's the user's turn but no buttons pressed yet
-            // -> the user only completed the previous rounds
+            // -> zero buttons are illuminated in the history
             if ((round > 1 && !isUserTurn) || (isUserTurn && currentInput.isEmpty())) {
-                score = round - 1
-                // If the user quits without clicking, zero buttons are illuminated in the history
                 correctClicks = 0
 
-                // CASE 3: It's the user's turn and at least one correct button is pressed
-                // -> include all correctly pressed buttons from this round
+            // CASE 3: It's the user's turn and at least one correct button is pressed
+            // -> counts the actual clicks from the input string
             } else {
-                score = round
-                // Counts the actual clicks from the input string
                 correctClicks = currentInput.split(", ").size
             }
 
@@ -276,6 +285,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
         demoJob?.cancel() // stop the demo
         glowJob?.cancel() // turn off all glow animations
+        delayJob?.cancel() // cancel any pending delay coroutine
 
         // Reset internal game variable in ViewModel
         computerSequence = ""
