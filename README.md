@@ -20,7 +20,13 @@ UI base and app logo designed with the help of **Figma AI**.
 ```
 com.example.simongame
 ├── MainActivity.kt       — navigation graph setup
-├── StartScreen.kt        — main game screen
-├── HistoryScreen.kt      — history of played games
-└── GameConst.kt          — colors and game constants
+├── HistoryScreen.kt      — scrollable list of past games
+├── DetailScreen.kt       — detailed view of a specific played game
+├── StartScreen.kt        — main interactive game screen
+├── GameViewModel.kt      — game logic, UI state and coroutines
+├── SoundManager.kt       — audio playback handling for SimonButton
+├── GameDao.kt            — Room Data Access Object containing SQL queries
+├── GameEntity.kt         — Room database table representing a game session
+├── GameRepository.kt     — source for database operations
+└── GameRoomDatabase.kt   — Room database instance
 ```
